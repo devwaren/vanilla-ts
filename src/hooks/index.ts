@@ -14,3 +14,4 @@ export { useTSSelect } from "./useTSSelect";
 export { useTSAuth } from "./useTSAuth";
 export { useTSElementEach } from "./useTSForEach";
 export { useTSRequest } from './useTSFetch';
+export { useTSNavigate } from './useTSNavigate';
