@@ -9,9 +9,10 @@
         "esModuleInterop": true,
         "skipLibCheck": true,
         "strict": true,
+        "types": []
     },
     "include": [
         "src",
-        "index.d.ts"
+        "index.ts",
     ]
 }
