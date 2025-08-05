@@ -73,6 +73,13 @@ declare const useTSAuth: (_Component: HTMLElement | void, loginUrl: string) => n
 type TSElementEach = (elements: NodeListOf<HTMLElement> | HTMLElement[], events: (keyof HTMLElementEventMap)[], callback: (element: HTMLElement, event: Event) => void) => void;
 declare const useTSElementEach: TSElementEach;
 
+declare const useTSNavigate: () => {
+    back: () => void;
+    forward: () => void;
+};
+
+declare const useTSOutlet: (selector: string, childComponent: (DOM: HTMLElement) => void) => void;
+
 type RouteCallback = (errorElement?: HTMLElement, params?: Record<string, string>, query?: Record<string, string>) => void;
 interface RouteConfig {
     path: string;
@@ -95,4 +102,4 @@ declare class TSRouter {
     addRoute(route: RouteConfig): void;
 }
 
-export { TSRouter, html, useAnchor, useAnchorSingle, useInitialDOM, useTSAuth, useTSComponent, useTSElementEach, useTSElements, useTSEvent, useTSEventAll, useTSExtractParams, useTSMetaData, useTSParams, useTSPurifier, useTSSelect };
+export { TSRouter, html, useAnchor, useAnchorSingle, useInitialDOM, useTSAuth, useTSComponent, useTSElementEach, useTSElements, useTSEvent, useTSEventAll, useTSExtractParams, useTSMetaData, useTSNavigate, useTSOutlet, useTSParams, useTSPurifier, useTSSelect };
