@@ -1,4 +1,4 @@
-import debounce from 'lodash';
+import { debounce } from 'lodash-es';
 
 let sanitizeInput = (input: string): string => input; // fallback for SSR
 
