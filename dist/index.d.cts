@@ -78,7 +78,26 @@ declare const useTSNavigate: () => {
     forward: () => void;
 };
 
-declare const useTSOutlet: (selector: string, childComponent: (DOM: HTMLElement) => void) => void;
+type OutletComponent = (DOM: HTMLElement) => void;
+type ChildRoute = {
+    path: string;
+    outlet: string;
+    element: OutletComponent;
+};
+type Route = {
+    path: string;
+    element: (DOM: HTMLElement) => void;
+    children?: ChildRoute[];
+};
+interface RouterInstance {
+    routes: Route[];
+}
+type OutletOptions = {
+    path: string;
+    component: OutletComponent;
+};
+declare const useTSOutlet: (selector: string, outlets: OutletOptions[]) => void;
+declare function renderChildRoutes(DOM: HTMLElement, router: RouterInstance): void;
 
 type RouteCallback = (errorElement?: HTMLElement, params?: Record<string, string>, query?: Record<string, string>) => void;
 interface RouteConfig {
@@ -102,4 +121,4 @@ declare class TSRouter {
     addRoute(route: RouteConfig): void;
 }
 
-export { TSRouter, html, useAnchor, useAnchorSingle, useInitialDOM, useTSAuth, useTSComponent, useTSElementEach, useTSElements, useTSEvent, useTSEventAll, useTSExtractParams, useTSMetaData, useTSNavigate, useTSOutlet, useTSParams, useTSPurifier, useTSSelect };
+export { TSRouter, html, renderChildRoutes, useAnchor, useAnchorSingle, useInitialDOM, useTSAuth, useTSComponent, useTSElementEach, useTSElements, useTSEvent, useTSEventAll, useTSExtractParams, useTSMetaData, useTSNavigate, useTSOutlet, useTSParams, useTSPurifier, useTSSelect };
