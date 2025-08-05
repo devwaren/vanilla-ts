@@ -6,12 +6,10 @@
   "license": "MIT",
   "main": "./dist/index.cjs",
   "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
   "type": "module",
   "exports": {
     ".": {
       "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     }
   },
@@ -19,7 +17,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup index.ts --format esm,cjs --dts"
+    "build": "tsup index.mts --minify --format esm,cjs --dts --outDir dist"
   },
   "keywords": [
     "typescript",
