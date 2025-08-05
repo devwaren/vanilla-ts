@@ -1,5 +1,5 @@
 import DOMPurify from "dompurify";
-import { tsParamsStore } from "../../../store";
+import { tsParamsStore } from "../../store";
 
 type RouteCallback = (
   errorElement?: HTMLElement,
