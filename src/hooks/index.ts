@@ -16,3 +16,4 @@ export { useTSElementEach } from "./useTSForEach";
 export { useTSRequest } from './useTSFetch';
 export { useTSNavigate } from './useTSNavigate';
 export { useTSOutlet, renderChildRoutes } from './useTSOutlet';
+export { createSignal, createEffect } from './useReactivity';
