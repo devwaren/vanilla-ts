@@ -1,6 +1,6 @@
 import { debounce } from 'lodash-es';
 
-let sanitizeInput = (input: string): string => input; // fallback for SSR
+let sanitizeInput = (input: string): string => input;
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   sanitizeInput = (input: string): string => {
@@ -10,52 +10,67 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   };
 }
 
-export const useAnchor = typeof window !== 'undefined'
-  ? debounce((anchors: NodeListOf<HTMLAnchorElement>) => {
-    anchors.forEach(anchor => {
-      if (!anchor) return;
+type AnchorInput =
+  | NodeListOf<HTMLAnchorElement>
+  | HTMLAnchorElement[]
+  | HTMLAnchorElement
+  | null
+  | undefined;
 
-      const originalHref = anchor.getAttribute("href") || "#";
-      const originalClassName = anchor.getAttribute("class") || "";
+// Internal debounced function (expects anchors)
+const _enhanceAnchors = debounce((anchors: AnchorInput) => {
+  const resolvedAnchors: HTMLAnchorElement[] = (() => {
+    if (!anchors) return Array.from(document.querySelectorAll("a"));
+    if (Array.isArray(anchors)) return anchors;
+    if (anchors instanceof HTMLAnchorElement) return [anchors];
+    return Array.from(anchors); // NodeListOf<HTMLAnchorElement>
+  })();
 
-      const sanitizedHref = sanitizeInput(originalHref);
-      const sanitizedClassName = anchor.getAttribute("class")
-        ? sanitizeInput(anchor.getAttribute("class")!)
-        : originalClassName;
+  resolvedAnchors.forEach(anchor => {
+    if (!anchor || anchor.dataset.anchorEnhanced === 'true') return;
 
-      anchor.setAttribute("href", sanitizedHref);
-      anchor.setAttribute("class", sanitizedClassName);
+    anchor.dataset.anchorEnhanced = 'true';
 
-      if (anchor.getAttribute("aria-label")) {
-        anchor.setAttribute(
-          "aria-label",
-          sanitizeInput(anchor.getAttribute("aria-label")!)
-        );
-      }
+    const originalHref = anchor.getAttribute("href") || "#";
+    const sanitizedHref = sanitizeInput(originalHref);
+    anchor.setAttribute("href", sanitizedHref);
 
-      const childElement = anchor.querySelector(":scope > *") as HTMLElement;
-      if (childElement) {
-        anchor.innerHTML = "";
-        anchor.appendChild(childElement);
-      }
+    const originalClassName = anchor.getAttribute("class") || "";
+    const sanitizedClassName = sanitizeInput(originalClassName);
+    anchor.setAttribute("class", sanitizedClassName);
 
-      anchor.addEventListener("click", e => {
-        const target = e.currentTarget as HTMLAnchorElement;
-        const href = target.getAttribute("href");
+    const ariaLabel = anchor.getAttribute("aria-label");
+    if (ariaLabel) {
+      anchor.setAttribute("aria-label", sanitizeInput(ariaLabel));
+    }
 
-        try {
-          const url = new URL(href!, window.location.href);
-          if (url.origin !== window.location.origin) return;
-        } catch (error) {
-          console.error("Invalid URL:", error);
-          return;
-        }
+    const child = anchor.querySelector(":scope > *") as HTMLElement;
+    if (child) {
+      anchor.innerHTML = "";
+      anchor.appendChild(child);
+    }
+
+    anchor.addEventListener("click", (e: MouseEvent) => {
+      const target = e.currentTarget as HTMLAnchorElement;
+      const href = target.getAttribute("href");
+
+      if (!href || href.startsWith("#")) return;
+
+      try {
+        const url = new URL(href, window.location.href);
+        if (url.origin !== window.location.origin) return;
 
         e.preventDefault();
-        window.history.pushState({}, "", href);
-        const navEvent = new PopStateEvent("popstate");
-        window.dispatchEvent(navEvent);
-      });
+        window.history.pushState({}, "", url.pathname + url.search + url.hash);
+        window.dispatchEvent(new PopStateEvent("popstate"));
+      } catch (err) {
+        console.error("Invalid URL in anchor:", href, err);
+      }
     });
-  })
-  : () => { }; // SSR-safe no-op
+  });
+}, 50);
+
+// ✅ Public function: can be called with or without args
+export const useAnchor = (anchors?: AnchorInput): void => {
+  _enhanceAnchors(anchors);
+};
