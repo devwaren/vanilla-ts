@@ -12,8 +12,15 @@ export const useTSElements: TSElements = (
   config
 ) => {
   const defaultConfig: Config = {
-    ALLOWED_TAGS: ['main', 'div', 'h1', 'p', 'button', 'span', 'a', 'img', 'input'],
-    ALLOWED_ATTR: ['class', 'id', 'href', 'style', 'src', 'alt'],
+    USE_PROFILES: { svg: true, html: true },
+    ALLOWED_TAGS: [
+      "svg", "path", "circle", "rect", "line", "polyline", "polygon", "g",
+      "main", "div", "h1", "h2", "h3", "h4", "h5", "h6", "p", "button", "span", "a", "img", "input", "ul", "li", "i"
+    ],
+    ALLOWED_ATTR: [
+      "class", "id", "href", "src", "alt", "fill", "stroke", "stroke-width",
+      "viewBox", "xmlns", "d", "x", "y", "cx", "cy", "r", "width", "height"
+    ],
     ...config, // allow user overrides
   };
   const sanitizedContent = DOMPurify.sanitize(/*html*/ element, defaultConfig!); // Pass options if provided

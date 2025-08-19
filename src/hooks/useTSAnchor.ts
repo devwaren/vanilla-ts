@@ -17,50 +17,56 @@ type AnchorInput =
   | null
   | undefined;
 
-// Internal debounced function (expects anchors)
 const _enhanceAnchors = debounce((anchors: AnchorInput) => {
   const resolvedAnchors: HTMLAnchorElement[] = (() => {
     if (!anchors) return Array.from(document.querySelectorAll("a"));
     if (Array.isArray(anchors)) return anchors;
     if (anchors instanceof HTMLAnchorElement) return [anchors];
-    return Array.from(anchors); // NodeListOf<HTMLAnchorElement>
+    return Array.from(anchors);
   })();
 
   resolvedAnchors.forEach(anchor => {
     if (!anchor || anchor.dataset.anchorEnhanced === 'true') return;
-
     anchor.dataset.anchorEnhanced = 'true';
 
+    // Sanitize attributes
     const originalHref = anchor.getAttribute("href") || "#";
     const sanitizedHref = sanitizeInput(originalHref);
     anchor.setAttribute("href", sanitizedHref);
 
     const originalClassName = anchor.getAttribute("class") || "";
-    const sanitizedClassName = sanitizeInput(originalClassName);
-    anchor.setAttribute("class", sanitizedClassName);
+    anchor.setAttribute("class", sanitizeInput(originalClassName));
 
     const ariaLabel = anchor.getAttribute("aria-label");
     if (ariaLabel) {
       anchor.setAttribute("aria-label", sanitizeInput(ariaLabel));
     }
 
+    // Keep child elements safe (optional — you can remove this block if not needed)
     const child = anchor.querySelector(":scope > *") as HTMLElement;
     if (child) {
       anchor.innerHTML = "";
       anchor.appendChild(child);
     }
 
+    // Skip attaching click listener if:
+    // - It's a hash link (in-page navigation)
+    // - It's an external link
+    const href = anchor.getAttribute("href") || "";
+    if (href.startsWith("#")) return; // Let browser handle hash scrolling normally
+
+    try {
+      const url = new URL(href, window.location.href);
+      if (url.origin !== window.location.origin) return; // external link
+    } catch {
+      return; // invalid URL — skip
+    }
+
+    // Intercept same-origin navigation for SPA
     anchor.addEventListener("click", (e: MouseEvent) => {
-      const target = e.currentTarget as HTMLAnchorElement;
-      const href = target.getAttribute("href");
-
-      if (!href || href.startsWith("#")) return;
-
+      e.preventDefault();
       try {
         const url = new URL(href, window.location.href);
-        if (url.origin !== window.location.origin) return;
-
-        e.preventDefault();
         window.history.pushState({}, "", url.pathname + url.search + url.hash);
         window.dispatchEvent(new PopStateEvent("popstate"));
       } catch (err) {
@@ -70,7 +76,6 @@ const _enhanceAnchors = debounce((anchors: AnchorInput) => {
   });
 }, 50);
 
-// ✅ Public function: can be called with or without args
 export const useAnchor = (anchors?: AnchorInput): void => {
   _enhanceAnchors(anchors);
 };

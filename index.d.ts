@@ -3,13 +3,15 @@ export {
     createEffect,
     createSignal,
     renderChildRoutes,
-    useTSNoReload,
     useTSOutlet,
     useTSNavigate,
     useTSMetaData,
     useTSSelect,
     useTSComponent,
+    useTSCollection,
     useTSAuth,
-    useTSElementEach, useInitialDOM, useAnchorSingle, useTSPurifier, useTSEvent, useTSExtractParams, useTSParams, useTSEventAll, useTSElements
+    useTSAnchorMount,
+    useTSElementEach,
+    useInitialDOM, useAnchorSingle, useTSPurifier, useTSEvent, useTSExtractParams, useTSParams, useTSEventAll, useTSElements
 } from "./src/hooks"
 export { TSRouter } from "./src/routes/class/Router.class";

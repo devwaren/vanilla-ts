@@ -1,19 +1,29 @@
+import DOMPurify from "dompurify";
 
-type SanitizeInput = (input: string) => string;
+declare global {
+  interface Window {
+    __anchorSinglePopstateHandlerAttached?: boolean;
+  }
+}
 
 type AnchorSingle = (
-  element: HTMLElement,
+  element: HTMLAnchorElement | null,
   href: string,
   ariaLabel: string,
   className?: string,
   childElement?: HTMLElement | null
 ) => void;
 
-const sanitizeInput: SanitizeInput = (input) => {
-  const element = document.createElement("div");
-  element.innerText = input;
-  return element.innerHTML;
-};
+// Attach popstate listener only in the browser
+if (typeof window !== "undefined" && !window.__anchorSinglePopstateHandlerAttached) {
+  window.addEventListener("popstate", (e) => {
+    const state = e.state as { scrollPosition?: number };
+    if (state?.scrollPosition !== undefined) {
+      window.scrollTo(0, state.scrollPosition);
+    }
+  });
+  window.__anchorSinglePopstateHandlerAttached = true;
+}
 
 export const useAnchorSingle: AnchorSingle = (
   element,
@@ -24,39 +34,33 @@ export const useAnchorSingle: AnchorSingle = (
 ) => {
   if (!element) return;
 
-  const sanitizedHref = sanitizeInput(href);
-  const sanitizedAriaLabel = sanitizeInput(ariaLabel);
-  const sanitizedClassName = className ? sanitizeInput(className) : undefined;
+  // Sanitize string inputs
+  const sanitizedHref = DOMPurify.sanitize(href, { ALLOWED_URI_REGEXP: /^(https?:|\/)/ });
+  const sanitizedAriaLabel = DOMPurify.sanitize(ariaLabel, { USE_PROFILES: { html: false } });
 
   element.setAttribute("href", sanitizedHref);
   element.setAttribute("aria-label", sanitizedAriaLabel);
 
-  if (sanitizedClassName) {
-    element.className = sanitizedClassName;
+  if (className) {
+    element.className = className.trim();
   }
 
   if (childElement) {
-    element.innerHTML = "";
-    element.appendChild(childElement);
+    element.replaceChildren(childElement);
   }
 
-  element.addEventListener("click", e => {
-    e.preventDefault();
-    const target = e.currentTarget as HTMLAnchorElement;
-    const href = target.getAttribute("href");
-    if (href) {
-      const scrollPosition = window.scrollY;
-      window.scrollTo(0, 0);
-      window.history.pushState({ scrollPosition }, "", href);
-      const navEvent = new PopStateEvent("popstate");
-      dispatchEvent(navEvent);
-    }
-  });
-
-  window.addEventListener("popstate", e => {
-    const state = e.state as { scrollPosition?: number };
-    if (state && state.scrollPosition !== undefined) {
-      window.scrollTo(0, state.scrollPosition);
-    }
-  });
+  // Event binding only in browser
+  if (typeof window !== "undefined") {
+    element.addEventListener("click", (e) => {
+      e.preventDefault();
+      const target = e.currentTarget as HTMLAnchorElement;
+      const hrefAttr = target.getAttribute("href");
+      if (hrefAttr) {
+        const scrollPosition = window.scrollY;
+        window.scrollTo(0, 0);
+        window.history.pushState({ scrollPosition }, "", hrefAttr);
+        dispatchEvent(new PopStateEvent("popstate"));
+      }
+    });
+  }
 };

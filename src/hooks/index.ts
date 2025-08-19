@@ -16,4 +16,4 @@ export { useTSRequest } from './useTSFetch';
 export { useTSNavigate } from './useTSNavigate';
 export { useTSOutlet, renderChildRoutes } from './useTSOutlet';
 export { createSignal, createEffect } from './useReactivity';
-export { useTSNoReload } from './useTSNoReload';
+export { useTSAnchorMount } from './useTSAnchorMount';
