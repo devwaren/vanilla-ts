@@ -1,6 +1,6 @@
 {
   "name": "@devwareng/vanilla-ts",
-  "version": "1.2.68",
+  "version": "1.2.69",
   "description": "Framework-less TypeScript hooks for SPA development.",
   "author": "Waren Arapoc Gador",
   "license": "MIT",
@@ -39,6 +39,7 @@
   "devDependencies": {
     "@types/js-cookie": "^3.0.6",
     "@types/lodash-es": "^4.17.12",
+    "@types/node": "^24.3.0",
     "tsup": "^8.5.0",
     "typescript": "^5.3.0"
   }
