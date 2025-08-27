@@ -1,6 +1,6 @@
 {
   "name": "@devwareng/vanilla-ts",
-  "version": "1.2.102",
+  "version": "1.2.103",
   "description": "Framework-less TypeScript hooks for SPA development.",
   "author": "Waren Arapoc Gador",
   "license": "MIT",
@@ -30,6 +30,7 @@
   ],
   "dependencies": {
     "@types/fs-extra": "^11.0.4",
+    "brython": "^3.13.2",
     "dompurify": "^3.2.6",
     "fs-extra": "^11.3.1",
     "js-cookie": "^3.0.5",
