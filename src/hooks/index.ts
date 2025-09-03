@@ -17,3 +17,5 @@ export { useTSNavigate } from './useTSNavigate';
 export { useTSOutlet, renderChildRoutes } from './useTSOutlet';
 export { createSignal, createEffect } from './useReactivity';
 export { useTSAnchorMount } from './useTSAnchorMount';
+export { useTSloadBrython, loadPyFiles } from "./useTSInitializedBrython";
+export {useTSLazy} from "./useTSLazy"
