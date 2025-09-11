@@ -1,8 +1,8 @@
-import { debounce } from 'lodash-es';
+import { debounce } from "lodash-es";
 
+// Simple sanitization (escape HTML entities)
 let sanitizeInput = (input: string): string => input;
-
-if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+if (typeof window !== "undefined" && typeof document !== "undefined") {
   sanitizeInput = (input: string): string => {
     const element = document.createElement("div");
     element.innerText = input;
@@ -17,7 +17,10 @@ type AnchorInput =
   | null
   | undefined;
 
-const _enhanceAnchors = debounce((anchors: AnchorInput) => {
+/**
+ * Enhance anchors for SPA navigation
+ */
+const enhanceAnchors = (anchors: AnchorInput) => {
   const resolvedAnchors: HTMLAnchorElement[] = (() => {
     if (!anchors) return Array.from(document.querySelectorAll("a"));
     if (Array.isArray(anchors)) return anchors;
@@ -26,14 +29,10 @@ const _enhanceAnchors = debounce((anchors: AnchorInput) => {
   })();
 
   resolvedAnchors.forEach(anchor => {
-    if (!anchor || anchor.dataset.anchorEnhanced === 'true') return;
-    anchor.dataset.anchorEnhanced = 'true';
+    if (!anchor || anchor.dataset.anchorEnhanced === "true") return;
+    anchor.dataset.anchorEnhanced = "true";
 
-    // Sanitize attributes
-    const originalHref = anchor.getAttribute("href") || "#";
-    const sanitizedHref = sanitizeInput(originalHref);
-    anchor.setAttribute("href", sanitizedHref);
-
+    // ✅ Sanitize class + aria-label, but don't rewrite href
     const originalClassName = anchor.getAttribute("class") || "";
     anchor.setAttribute("class", sanitizeInput(originalClassName));
 
@@ -42,39 +41,43 @@ const _enhanceAnchors = debounce((anchors: AnchorInput) => {
       anchor.setAttribute("aria-label", sanitizeInput(ariaLabel));
     }
 
-    // Keep child elements safe (optional — you can remove this block if not needed)
+    // Handle child sanitization safely (optional)
     const child = anchor.querySelector(":scope > *") as HTMLElement;
     if (child) {
       anchor.innerHTML = "";
       anchor.appendChild(child);
     }
 
-    // Skip attaching click listener if:
-    // - It's a hash link (in-page navigation)
-    // - It's an external link
     const href = anchor.getAttribute("href") || "";
-    if (href.startsWith("#")) return; // Let browser handle hash scrolling normally
 
+    // Skip hash links
+    if (href.startsWith("#")) return;
+
+    // Skip external links
     try {
       const url = new URL(href, window.location.href);
-      if (url.origin !== window.location.origin) return; // external link
+      if (url.origin !== window.location.origin) return;
     } catch {
-      return; // invalid URL — skip
+      return;
     }
 
-    // Intercept same-origin navigation for SPA
+    // ✅ Intercept internal navigation
     anchor.addEventListener("click", (e: MouseEvent) => {
-      e.preventDefault();
+      e.preventDefault(); // stop reload immediately
+      const rawHref = anchor.getAttribute("href") || "";
       try {
-        const url = new URL(href, window.location.href);
+        const url = new URL(rawHref, window.location.href);
         window.history.pushState({}, "", url.pathname + url.search + url.hash);
         window.dispatchEvent(new PopStateEvent("popstate"));
       } catch (err) {
-        console.error("Invalid URL in anchor:", href, err);
+        console.error("Invalid URL in anchor:", rawHref, err);
       }
     });
   });
-}, 50);
+};
+
+// Debounced wrapper (for dynamic DOM changes)
+const _enhanceAnchors = debounce(enhanceAnchors, 50);
 
 export const useAnchor = (anchors?: AnchorInput): void => {
   _enhanceAnchors(anchors);

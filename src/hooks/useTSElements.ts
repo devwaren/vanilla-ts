@@ -25,7 +25,7 @@ export const useTSElements: TSElements = (
     ALLOWED_ATTR: [
       "class", "id", "href", "src", "alt", "fill", "stroke", "stroke-width",
       "viewBox", "xmlns", "d", "x", "y", "cx", "cy", "r", "width", "height",
-      "data-onclick", "data-onchange", "data-onselect" // ✅ added safe attribute
+      "data-onclick", "data-onchange", "data-onselect"
     ],
     FORBID_TAGS: ["script", "iframe"],
     ALLOWED_URI_REGEXP:

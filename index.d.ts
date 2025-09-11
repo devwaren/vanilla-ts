@@ -14,7 +14,11 @@ export {
     useTSAnchorMount,
     useTSLazy,
     useTSElementEach,
+    useAnchor,
+    useTSNoReload,
+    useTSHashAnchor,
     useTSloadBrython, loadPyFiles,
+    useTSSSRHydration,
     useInitialDOM, useAnchorSingle, useTSPurifier, useTSEvent, useTSExtractParams, useTSParams, useTSEventAll, useTSElements
 } from "./src/hooks"
 export { TSRouter } from "./src/routes/class/Router.class";
