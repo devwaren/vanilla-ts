@@ -2,21 +2,6 @@
 # yarn lockfile v1
 
 
-"@devwareng/vanilla-ts@^1.2.118":
-  version "1.2.118"
-  resolved "https://registry.yarnpkg.com/@devwareng/vanilla-ts/-/vanilla-ts-1.2.118.tgz#f45daa87e0e1e8ed0262db8bbb8f2deac9df74a8"
-  integrity sha512-fqIZ40rI+sLXL9kN5g6DyTOVlTrOgmeg/6NEpAtoCtktvZI+8OhLcG6qHegxLL6YvYiiBSqGvpLzKg3Ncte3Fg==
-  dependencies:
-    "@types/fs-extra" "^11.0.4"
-    brython "^3.13.2"
-    dompurify "^3.2.6"
-    fs-extra "^11.3.1"
-    js-cookie "^3.0.5"
-    jwt-decode "^4.0.0"
-    lodash-es "^4.17.21"
-    xss "^1.0.15"
-    zustand "^5.0.7"
-
 "@esbuild/aix-ppc64@0.25.8":
   version "0.25.8"
   resolved "https://registry.yarnpkg.com/@esbuild/aix-ppc64/-/aix-ppc64-0.25.8.tgz#a1414903bb38027382f85f03dda6065056757727"
