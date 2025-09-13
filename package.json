@@ -1,6 +1,6 @@
 {
   "name": "@devwareng/vanilla-ts",
-  "version": "1.4.28",
+  "version": "1.4.29",
   "description": "Framework-less TypeScript hooks for SPA development.",
   "author": "Waren Arapoc Gador",
   "license": "MIT",
@@ -17,7 +17,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup index.mts --minify --format esm,cjs --dts --outDir dist"
+    "build": "tsup index.mts --minify --format esm,cjs --dts --outDir dist && tsx genRoute.ts"
   },
   "keywords": [
     "typescript",
@@ -45,6 +45,7 @@
     "@types/node": "^24.3.0",
     "process": "^0.11.10",
     "tsup": "^8.5.0",
+    "tsx": "^4.20.5",
     "typescript": "^5.3.0"
   }
 }
