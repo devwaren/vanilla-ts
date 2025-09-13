@@ -1,10 +1,11 @@
-import { defineConfig } from 'tsup';
+import { defineConfig } from "tsup";
 
 export default defineConfig({
-    entry: ['index.ts'],            // Your entry file
-    format: ['esm', 'cjs'],         // Must include both
-    dts: true,                      // Generate .d.ts
-    clean: true,
-    minify: false,
-    sourcemap: true,
+    entry: ["index.mts"],
+    format: ["esm", "cjs"],
+    dts: true,
+    minify: true,
+    target: "esnext",
+    bundle: true,
+    platform: "node"
 });

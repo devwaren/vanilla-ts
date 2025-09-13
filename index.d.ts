@@ -1,5 +1,6 @@
 export { html } from './src/define';
 export { mapper } from './src/func'
+export { TSFilebasedRouter } from "./genRoute"
 export {
     createEffect,
     createSignal,
@@ -19,8 +20,8 @@ export {
     useTSHashAnchor,
     useTSloadBrython, loadPyFiles,
     useTSSSRHydration,
-    useTSFilebasedRouter,
     useInitialDOM, useAnchorSingle, useTSPurifier, useTSEvent, useTSExtractParams, useTSParams, useTSEventAll, useTSElements
 } from "./src/hooks"
 export { TSRouter } from "./src/routes/class/Router.class";
+
 
