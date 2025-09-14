@@ -1,6 +1,6 @@
 {
   "name": "@devwareng/vanilla-ts",
-  "version": "1.4.48",
+  "version": "1.4.49",
   "description": "Framework-less TypeScript hooks for SPA development.",
   "author": "Waren Arapoc Gador",
   "license": "MIT",
@@ -36,6 +36,7 @@
     "js-cookie": "^3.0.5",
     "jwt-decode": "^4.0.0",
     "lodash-es": "^4.17.21",
+    "vite": "^7.1.5",
     "xss": "^1.0.15",
     "zustand": "^5.0.7"
   },
