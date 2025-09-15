@@ -7,5 +7,16 @@ export default defineConfig({
     minify: true,
     target: "esnext",
     bundle: true,
-    platform: "node"
+    platform: "node",
+    external: [
+        'fs',
+        'fs/promises',
+        'os',
+        'stream',
+        'events',
+        'node:path',
+        'node:fs/promises',
+        'node:stream',
+        'path'
+    ],
 });

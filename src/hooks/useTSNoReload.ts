@@ -1,8 +1,8 @@
-// useTSNoReload.ts
 import { useAnchor } from './useTSAnchor';
+import { useTSSelect } from './useTSSelect';
 
-const useTSNoReload = (DOM: HTMLElement) => {
-    const anchors = DOM.querySelectorAll("a") as NodeListOf<HTMLAnchorElement>;
+const useTSNoReload = () => {
+    const anchors = useTSSelect("a") as NodeListOf<HTMLAnchorElement> | null;
     useAnchor(anchors);
 };
 

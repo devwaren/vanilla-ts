@@ -16,10 +16,8 @@ export { useTSRequest } from './useTSFetch';
 export { useTSNavigate } from './useTSNavigate';
 export { useTSOutlet, renderChildRoutes } from './useTSOutlet';
 export { createSignal, createEffect } from './useReactivity';
-export { useTSAnchorMount } from './useTSAnchorMount';
 export { useTSloadBrython, loadPyFiles } from "./useTSInitializedBrython";
 export { useTSLazy } from "./useTSLazy"
 export { useTSSSRHydration } from "./useTSSSRHydration"
-export { useTSNoReload } from "./useTSNoReload"
 export { useTSHashAnchor } from "./useTSHashAnchor"
-export { useAnchor } from "./useTSAnchor"
+export { useTSNoReload } from "./useTSNoReload"

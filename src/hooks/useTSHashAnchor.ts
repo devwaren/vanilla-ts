@@ -1,11 +1,12 @@
 import { useTSElementEach } from './useTSForEach';
+import { useTSSelect } from './useTSSelect';
 
 
 const useTSHashAnchor = () => {
-    const links = document.querySelectorAll<HTMLAnchorElement>('a[href^="#"]');
+    const links = useTSSelect('a[href^="#"]') as NodeListOf<HTMLAnchorElement> | null;
 
     useTSElementEach(
-        links,
+        links!,
         ['click'],
         (element, e) => {
             e.preventDefault();
