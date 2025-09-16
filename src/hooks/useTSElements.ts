@@ -5,15 +5,15 @@ type EventHandlers = Record<string, EventListener>;
 type TSElements = (
   htmlElement: HTMLElement,
   element: string,
-  config?: Config,
-  handlers?: EventHandlers
+  handlers?: EventHandlers,
+  config?: Config
 ) => void;
 
 export const useTSElements: TSElements = (
   htmlElement,
   element,
-  config,
-  handlers = {}
+  handlers = {},
+  config
 ) => {
   const defaultConfig: Config = {
     USE_PROFILES: { svg: true, html: true },
@@ -25,16 +25,17 @@ export const useTSElements: TSElements = (
     ALLOWED_ATTR: [
       "class", "id", "href", "src", "alt", "fill", "stroke", "stroke-width",
       "viewBox", "xmlns", "d", "x", "y", "cx", "cy", "r", "width", "height",
-      "data-onclick", "data-onchange", "data-onselect"
+      "data-onclick", "data-onchange", "data-onselect",
+      "data-classlist", "data-hover"
     ],
-    FORBID_TAGS: ["script", "iframe", "foreignObject"], // block dangerous containers
-    FORBID_ATTR: ["style", "xlink:href"], // block inline styles & SVG links
+    FORBID_TAGS: ["script", "iframe", "foreignObject"],
+    FORBID_ATTR: ["style", "xlink:href"],
     ALLOWED_URI_REGEXP:
       /^(?:(?:https?|mailto|tel|ftp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     ...config,
   };
 
-  // Allow custom elements dynamically but forbid <foreignObject>
+  // Allow custom elements but forbid <foreignObject>
   DOMPurify.addHook("uponSanitizeElement", (node, data) => {
     const tagName = data.tagName.toLowerCase();
     if (tagName.includes("-")) {
@@ -47,51 +48,97 @@ export const useTSElements: TSElements = (
 
   // Attribute-level sanitization
   DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {
-    const attrName = data.attrName.toLowerCase();
+    const attrName = (data.attrName || "").toLowerCase();
+    const rawValue = (data.attrValue ?? "").toString();
+    const value = rawValue.trim();
 
-    // Strip any inline event handler (onclick, onerror, etc.)
     if (attrName.startsWith("on")) {
       data.keepAttr = false;
+      return;
     }
 
-    // Extra check for <img src="">
     if (node.nodeName.toLowerCase() === "img" && attrName === "src") {
-      const value = data.attrValue.trim();
-
       const isSafe =
-        /^https?:\/\//i.test(value) ||            // absolute http/https
-        /^\/(?!\/)/.test(value) ||                // relative path (/logo.png)
-        /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(value); // safe data URI
+        /^https?:\/\//i.test(value) ||
+        /^\/(?!\/)/.test(value) ||
+        /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(value);
+      if (!isSafe) data.keepAttr = false;
+      return;
+    }
 
-      if (!isSafe) {
-        data.keepAttr = false; // remove malicious src
+    if (attrName === "class") {
+      const tokens = value.split(/\s+/).filter(Boolean);
+      const safeTokens: string[] = tokens.filter((token) => {
+        if (!token.includes("[")) {
+          return /^[a-zA-Z0-9\-\:\/_]+$/.test(token);
+        }
+        if (/^bg-\[url\((['"]?)(https?:\/\/|\/)[^\s)]+\1\)\]$/.test(token)) {
+          const urlMatch = token.match(/^bg-\[url\((['"]?)(https?:\/\/|\/)([^\s)]+)\1\)\]$/);
+          if (!urlMatch) return false;
+          const url = urlMatch[2] + urlMatch[3];
+          return /^https?:\/\//i.test(url) || /^\/(?!\/)/.test(url);
+        }
+        if (/^bg-\[#([0-9A-Fa-f]{3,8})\]$/.test(token)) {
+          return true;
+        }
+        return false;
+      });
+      data.attrValue = safeTokens.join(" ");
+      return;
+    }
+
+    if (attrName === "data-classlist") {
+      if (!/^[a-zA-Z0-9\-\s:_]+$/.test(value)) {
+        data.keepAttr = false;
       }
+      return;
+    }
+
+    if (attrName === "data-hover") {
+      if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
+        data.keepAttr = false;
+      }
+      return;
     }
   });
 
-  // Sanitize and return a DocumentFragment instead of a string
   const sanitizedFragment = DOMPurify.sanitize(element, {
     ...defaultConfig,
     RETURN_DOM: true,
   }) as DocumentFragment;
 
-  // Clear old content and append safe DOM
   htmlElement.innerHTML = "";
   htmlElement.appendChild(sanitizedFragment);
 
-  // Bind safe declarative events
-  htmlElement.querySelectorAll<HTMLElement>("[data-onclick]").forEach((el) => {
-    const key = el.dataset.onclick!;
-    if (handlers[key]) el.addEventListener("click", handlers[key]);
+  const safeBind = (selector: string, datasetKey: string, eventName: string) => {
+    htmlElement.querySelectorAll<HTMLElement>(selector).forEach((el) => {
+      const key = (el.dataset as any)[datasetKey];
+      if (!key) return;
+      if (Object.prototype.hasOwnProperty.call(handlers, key)) {
+        el.addEventListener(eventName, handlers[key]);
+      }
+    });
+  };
+
+  safeBind("[data-onclick]", "onclick", "click");
+  safeBind("[data-onchange]", "onchange", "change");
+  safeBind("[data-onselect]", "onselect", "select");
+  safeBind("[data-hover]", "hover", "mouseenter");
+
+  htmlElement.querySelectorAll<HTMLElement>("[data-hover]").forEach((el) => {
+    const key = el.dataset.hover!;
+    if (!key) return;
+    if (Object.prototype.hasOwnProperty.call(handlers, key)) {
+      el.addEventListener("mouseenter", handlers[key]);
+      el.addEventListener("mouseleave", handlers[key]);
+    }
   });
 
-  htmlElement.querySelectorAll<HTMLElement>("[data-onchange]").forEach((el) => {
-    const key = el.dataset.onchange!;
-    if (handlers[key]) el.addEventListener("change", handlers[key]);
-  });
-
-  htmlElement.querySelectorAll<HTMLElement>("[data-onselect]").forEach((el) => {
-    const key = el.dataset.onselect!;
-    if (handlers[key]) el.addEventListener("select", handlers[key]);
+  htmlElement.querySelectorAll<HTMLElement>("[data-classlist]").forEach((el) => {
+    const classList = el.dataset.classlist!;
+    if (/^[a-zA-Z0-9\-\s:_]+$/.test(classList)) {
+      el.classList.add(...classList.split(/\s+/));
+    }
   });
 };
+0

@@ -219,21 +219,38 @@ export function createRouter(DOM: HTMLElement) {
 
       // --- Watch only in dev ---
       if (isDev) {
-        chokidar.watch(PAGES_DIR).on('all', async (event, filePath) => {
-          if (event === 'add' && filePath.endsWith('.ts')) {
+        const watcher = chokidar.watch(PAGES_DIR);
+
+        watcher.on('all', async (event, filePath) => {
+          if (!filePath.endsWith('.ts')) return;
+
+          if (event === 'add') {
+            // File added
             const baseName = path.basename(filePath, '.ts');
-            const pascalName = baseName.replace(/\[|\]/g, 'Param').replace(/(^\w|-\w)/g, m => m.replace('-', '').toUpperCase());
+            const pascalName = baseName
+              .replace(/\[|\]/g, 'Param')
+              .replace(/(^\w|-\w)/g, m => m.replace('-', '').toUpperCase());
             const relRoute = toRoutePath(filePath, PAGES_DIR);
             const content = (await fs.readFile(filePath, 'utf-8')).trim();
             if (!content) await fs.writeFile(filePath, createPageTemplate(pascalName, relRoute), 'utf-8');
             await generate();
+          } else if (event === 'unlink') {
+            // File removed
+            console.log(`⚠️ File removed: ${filePath}`);
+            await generate(); // regenerate routes
+          } else if (event === 'change') {
+            // Optional: regenerate if file content changes
+            await generate();
           }
         });
 
+        // Watch root file separately for unlink
         chokidar.watch(ROOT_FILE).on('unlink', async () => {
+          console.log(`⚠️ Root file removed: regenerating...`);
           await fs.writeFile(ROOT_FILE, createRootTemplate(), 'utf-8');
         });
       }
+
 
       console.log('🟢 TS Filebased Router Generated Successfully...');
     },

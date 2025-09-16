@@ -1,16 +1,28 @@
 function sanitize(input: unknown): string {
-    // Always convert to string first
-    const str = input === null || input === undefined ? "" : String(input);
+    // Always convert to string
+    let str = input === null || input === undefined ? "" : String(input);
+
+    // Normalize case for easier matching
+    const lower = str.toLowerCase();
+
+    // Quick reject if it contains obvious script patterns
+    if (lower.includes("<script") || lower.includes("javascript:")) {
+        str = "";
+    }
 
     return str
-        // remove <script>, <iframe>, <object>, <embed>, <link>, <style> blocks
-        .replace(/<\s*(script|iframe|object|embed|link|style)[^>]*>.*?<\s*\/\s*\1\s*>/gi, "")
-        // remove opening dangerous tags without closing
-        .replace(/<\s*(script|iframe|object|embed|link|style)[^>]*>/gi, "")
-        // strip inline event handlers like onclick=, onerror=, etc.
-        .replace(/\son\w+\s*=\s*(['"]).*?\1/gi, "")
-        // block javascript: URLs
-        .replace(/\s(href|src)\s*=\s*(['"])\s*javascript:[^'"]*\2/gi, "");
+        // Remove <script>, <iframe>, <object>, <embed>, <link>, <style>, <meta>
+        .replace(/<\s*(script|iframe|object|embed|link|style|meta)[^>]*>.*?<\s*\/\s*\1\s*>/gi, "")
+        // Remove standalone dangerous opening tags
+        .replace(/<\s*(script|iframe|object|embed|link|style|meta)[^>]*>/gi, "")
+        // Strip inline event handlers like onclick=, onerror=, etc.
+        .replace(/\s+on\w+\s*=\s*(['"]).*?\1/gi, "")
+        .replace(/\s+on\w+\s*=\s*[^\s>]+/gi, "") // also unquoted
+        // Block javascript:, vbscript:, data: etc. in href/src
+        .replace(
+            /\s(href|src)\s*=\s*(['"]?)\s*(javascript:|vbscript:|data:|file:)[^'">\s]*\2/gi,
+            "$1=\"#\""
+        );
 }
 
 export function html(strings: TemplateStringsArray, ...values: unknown[]): string {
