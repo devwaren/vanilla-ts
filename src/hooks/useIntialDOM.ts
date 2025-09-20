@@ -57,4 +57,7 @@ export const useInitialDOM: TSInitialDOM = (id, mount) => {
     targetElement.innerHTML = safeHTML;
     mount(targetElement);
   }
+
+  document.addEventListener("click", e => e.preventDefault());
+
 };
