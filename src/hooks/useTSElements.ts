@@ -121,10 +121,11 @@ export const useTSElements: TSElements = (
     });
   };
 
-  safeBind("[data-onclick]", "onclick", "click");
-  safeBind("[data-onchange]", "onchange", "change");
-  safeBind("[data-onselect]", "onselect", "select");
+  safeBind("[data-click]", "onclick", "click");
+  safeBind("[data-change]", "onchange", "change");
+  safeBind("[data-select]", "onselect", "select");
   safeBind("[data-hover]", "hover", "mouseenter");
+  safeBind("[data-submit]", "onsubmit", "submit");
 
   htmlElement.querySelectorAll<HTMLElement>("[data-hover]").forEach((el) => {
     const key = el.dataset.hover!;
