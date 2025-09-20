@@ -1,5 +1,6 @@
 import type { Plugin } from 'vite';
 
+
 const TSFilebasedRouter = (): Plugin => {
   return {
     name: 'ts-filebased-router',
@@ -43,6 +44,14 @@ const TSFilebasedRouter = (): Plugin => {
         const fileName = parts[parts.length - 1].replace('.ts', '');
         const folderName = parts.length > 1 ? parts[parts.length - 2] : '';
 
+        // ✅ Special case: index.ts → use folder name
+        if (fileName === 'index') {
+          return folderName
+            ? folderName.charAt(0).toUpperCase() + folderName.slice(1)
+            : 'Index';
+        }
+
+        // ✅ Handle dynamic routes [id].ts → SomethingIdParam
         if (fileName.startsWith('[') && fileName.endsWith(']')) {
           const paramName = fileName.slice(1, -1);
           return (
@@ -52,10 +61,12 @@ const TSFilebasedRouter = (): Plugin => {
             paramName.slice(1) +
             'Param'
           );
-        } else {
-          return fileName.charAt(0).toUpperCase() + fileName.slice(1);
         }
+
+        // ✅ Normal file
+        return fileName.charAt(0).toUpperCase() + fileName.slice(1);
       }
+
 
       async function walk(dir: string) {
         const entries = await fs.readdir(dir, { withFileTypes: true });
@@ -92,7 +103,7 @@ export default function ${componentName}(DOM: HTMLElement) {
   const ui = useTSElements(
     DOM,
     html\`
-      <div class="p-4">
+      <div class="p-4 animate__animated animate__fadeIn duration-300">
         <h1>${componentName}</h1>
         ${hasParams ? `<pre>\${JSON.stringify(params, null, 2)}</pre>` : ''}
       </div>
@@ -150,7 +161,7 @@ export const Router = (DOM: HTMLElement) => {
         const notFoundExport = notFoundRoute
           ? `export const NotFound = ${notFoundRoute.importName}`
           : `export function NotFound(DOM: HTMLElement) {
-  return useTSElements(DOM, html\`<div><h1>404 - Page Not Found</h1></div>\`)
+  return useTSElements(DOM, html\`<div class="animate__animated animate__fadeIn duration-300 p-4"><h1>404 - Page Not Found</h1></div>\`)
 }`;
 
         const content = `// AUTO-GENERATED FILE. DO NOT EDIT MANUALLY.

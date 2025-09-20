@@ -17,6 +17,10 @@ export default defineConfig({
         'node:path',
         'node:fs/promises',
         'node:stream',
-        'path'
+        'path',
+        '*.css'
     ],
+    loader: {
+        ".css": "file",
+    }
 });

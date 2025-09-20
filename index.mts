@@ -13,4 +13,3 @@ export {
 } from "./src/hooks"
 export { TSRouter } from "./src/routes/class/Router.class";
 export { TSFilebasedRouter } from "./genRoute"
-

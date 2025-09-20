@@ -12,7 +12,7 @@ function sanitize(input: unknown): string {
 
     return str
         // Remove <script>, <iframe>, <object>, <embed>, <link>, <style>, <meta>
-        .replace(/<\s*(script|iframe|object|embed|link|style|meta)[^>]*>.*?<\s*\/\s*\1\s*>/gi, "")
+        .replace(/<\s*(script|iframe|object|embed|link|style|meta|body)[^>]*>.*?<\s*\/\s*\1\s*>/gi, "")
         // Remove standalone dangerous opening tags
         .replace(/<\s*(script|iframe|object|embed|link|style|meta)[^>]*>/gi, "")
         // Strip inline event handlers like onclick=, onerror=, etc.

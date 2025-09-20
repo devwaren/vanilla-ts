@@ -28,7 +28,7 @@ export const useTSElements: TSElements = (
       "data-onclick", "data-onchange", "data-onselect",
       "data-classlist", "data-hover"
     ],
-    FORBID_TAGS: ["script", "iframe", "foreignObject"],
+    FORBID_TAGS: ["script", "iframe", "foreignObject", "body"],
     FORBID_ATTR: ["style", "xlink:href"],
     ALLOWED_URI_REGEXP:
       /^(?:(?:https?|mailto|tel|ftp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
@@ -102,9 +102,10 @@ export const useTSElements: TSElements = (
     }
   });
 
+  // ✅ Force fragment mode (no <body> auto-wrapping)
   const sanitizedFragment = DOMPurify.sanitize(element, {
     ...defaultConfig,
-    RETURN_DOM: true,
+    RETURN_DOM_FRAGMENT: true,
   }) as DocumentFragment;
 
   htmlElement.innerHTML = "";
@@ -141,4 +142,3 @@ export const useTSElements: TSElements = (
     }
   });
 };
-0

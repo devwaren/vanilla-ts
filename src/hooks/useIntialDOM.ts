@@ -14,7 +14,7 @@ export const useInitialDOM: TSInitialDOM = (id, mount) => {
 
   // Sanitize with strict whitelist
   const sanitizedHTML = DOMPurify.sanitize(dirtyHTML, {
-    USE_PROFILES: { html: true }, // no SVG or MathML
+    USE_PROFILES: { html: true },
     ALLOWED_TAGS: [
       "div", "span", "p", "h1", "h2", "h3", "h4", "h5", "h6",
       "ul", "ol", "li", "strong", "em", "a", "img", "br"
@@ -23,11 +23,12 @@ export const useInitialDOM: TSInitialDOM = (id, mount) => {
       "href", "src", "alt", "title", "class", "id",
       "data-onclick", "data-onchange"
     ],
-    FORBID_TAGS: ["script", "iframe", "object", "embed", "form"],
-    FORBID_ATTR: ["style", "srcset"], // block inline CSS & image srcset injection
-    ALLOW_DATA_ATTR: false, // no other data-* attributes
+    FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "body", "html"],
+    FORBID_ATTR: ["style", "srcset"],
+    ALLOW_DATA_ATTR: false,
     KEEP_CONTENT: false,
   });
+
 
   // Harden href/src protocols manually
   const safeHTML = sanitizedHTML.replace(
