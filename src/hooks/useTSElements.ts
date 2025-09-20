@@ -141,4 +141,8 @@ export const useTSElements: TSElements = (
       el.classList.add(...classList.split(/\s+/));
     }
   });
+
+  document.addEventListener("DOMContentLoaded", (e) => {
+    e.preventDefault();
+  })
 };
