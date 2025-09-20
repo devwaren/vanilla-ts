@@ -3,7 +3,7 @@
 const sanitizeHtml = (str: string) => {
     return str
         // remove fully dangerous tags
-        .replace(/<\/?(script|iframe|object|embed|link|meta|style|form|input|button|textarea|svg|math|body)[^>]*>/gi, "")
+        .replace(/<\/?(script|iframe|object|embed|link|meta|style|textarea|svg|math|body)[^>]*>/gi, "")
 
         // allow only safe tags
         .replace(
