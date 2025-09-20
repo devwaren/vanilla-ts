@@ -17,18 +17,19 @@ export const useInitialDOM: TSInitialDOM = (id, mount) => {
     USE_PROFILES: { html: true },
     ALLOWED_TAGS: [
       "div", "span", "p", "h1", "h2", "h3", "h4", "h5", "h6",
-      "ul", "ol", "li", "strong", "em", "a", "img", "br"
+      "ul", "ol", "li", "strong", "em", "a", "img", "br",
+      "form", "button", "input", "label" // ✅ allow form controls
     ],
     ALLOWED_ATTR: [
       "href", "src", "alt", "title", "class", "id",
-      "data-onclick", "data-onchange"
+      "type", "name", "value", "placeholder",
+      "data-onclick", "data-onchange", "data-onsubmit" // ✅ added
     ],
-    FORBID_TAGS: ["script", "iframe", "object", "embed", "form", "body", "html"],
+    FORBID_TAGS: ["script", "iframe", "object", "embed", "body", "html"],
     FORBID_ATTR: ["style", "srcset"],
     ALLOW_DATA_ATTR: false,
     KEEP_CONTENT: false,
   });
-
 
   // Harden href/src protocols manually
   const safeHTML = sanitizedHTML.replace(
