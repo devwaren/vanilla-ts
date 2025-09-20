@@ -7,9 +7,10 @@ const sanitizeHtml = (str: string) => {
 
         // allow only safe tags
         .replace(
-            /<(?!\/?(b|i|em|strong|p|br|ul|ol|li|a|div|span|h1|h2|h3|h4|h5|h6|section|article)\b)[^>]*>/gi,
+            /<(?!\/?(b|i|em|strong|p|br|ul|ol|li|a|div|span|h1|h2|h3|h4|h5|h6|section|article|input|button)\b)[^>]*>/gi,
             ""
         )
+
 
         // strip all inline event handlers
         .replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
