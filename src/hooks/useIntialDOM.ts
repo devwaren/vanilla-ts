@@ -18,12 +18,13 @@ export const useInitialDOM: TSInitialDOM = (id, mount) => {
     ALLOWED_TAGS: [
       "div", "span", "p", "h1", "h2", "h3", "h4", "h5", "h6",
       "ul", "ol", "li", "strong", "em", "a", "img", "br",
-      "form", "button", "input", "label" // ✅ allow form controls
+      "form", "button", "input", "label"
     ],
     ALLOWED_ATTR: [
       "href", "src", "alt", "title", "class", "id",
       "type", "name", "value", "placeholder",
-      "data-onclick", "data-onchange", "data-onsubmit" // ✅ added
+      // ✅ allow only your custom TS event attributes
+      "ts-click", "ts-change", "ts-submit", "ts-select", "ts-hover"
     ],
     FORBID_TAGS: ["script", "iframe", "object", "embed", "body", "html"],
     FORBID_ATTR: ["style", "srcset"],
@@ -57,7 +58,4 @@ export const useInitialDOM: TSInitialDOM = (id, mount) => {
     targetElement.innerHTML = safeHTML;
     mount(targetElement);
   }
-
-  document.addEventListener("click", e => e.preventDefault());
-
 };
