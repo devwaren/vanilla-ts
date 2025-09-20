@@ -25,8 +25,8 @@ export const useTSElements: TSElements = (
     ALLOWED_ATTR: [
       "class", "id", "href", "src", "alt", "fill", "stroke", "stroke-width",
       "viewBox", "xmlns", "d", "x", "y", "cx", "cy", "r", "width", "height",
-      "data-onclick", "data-onchange", "data-onselect",
-      "data-classlist", "data-hover"
+      "ts-click", "ts-change", "ts-select",
+      "ts-classlist", "ts-hover", "ts-onsubmit"
     ],
     FORBID_TAGS: ["script", "iframe", "foreignObject", "body"],
     FORBID_ATTR: ["style", "xlink:href"],
@@ -121,11 +121,11 @@ export const useTSElements: TSElements = (
     });
   };
 
-  safeBind("[data-click]", "onclick", "click");
-  safeBind("[data-change]", "onchange", "change");
-  safeBind("[data-select]", "onselect", "select");
-  safeBind("[data-hover]", "hover", "mouseenter");
-  safeBind("[data-submit]", "onsubmit", "submit");
+  safeBind("[ts-click]", "onclick", "click");
+  safeBind("[ts-change]", "onchange", "change");
+  safeBind("[ts-select]", "onselect", "select");
+  safeBind("[ts-hover]", "hover", "mouseenter");
+  safeBind("[ts-submit]", "onsubmit", "submit");
 
   htmlElement.querySelectorAll<HTMLElement>("[data-hover]").forEach((el) => {
     const key = el.dataset.hover!;
