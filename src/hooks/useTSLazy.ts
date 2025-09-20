@@ -1,30 +1,38 @@
-export function useTSLazy(factory: () => Promise<any>) {
-    let cached: any | null = null;
+export function useTSLazy<T extends (...args: any[]) => any>(
+    factory: () => Promise<{ default: T } | T>
+) {
+    let cachedModule: unknown | null = null;
 
-    return async (el?: HTMLElement, props?: any) => {
+    return async (el?: HTMLElement, props?: Parameters<T>[1]) => {
         try {
-            if (!cached) {
+            if (!cachedModule) {
                 const mod = await factory();
-                cached = mod.default || mod;
+                cachedModule = (mod as any).default || mod;
             }
 
-            // If it's a component function (Vanilla TS style)
-            if (typeof cached === "function") {
-                return cached(el, props);
+            // Function component (Vanilla TS style)
+            if (typeof cachedModule === "function") {
+                return (cachedModule as T)(el, props);
             }
 
-            // If it's already an HTMLElement
-            if (cached instanceof HTMLElement) {
-                el?.appendChild(cached);
-                return;
+            // Plain HTMLElement
+            if (cachedModule instanceof HTMLElement) {
+                const clone = cachedModule.cloneNode(true) as HTMLElement;
+                el?.appendChild(clone);
+                return clone;
             }
 
-            // If it's a plain object with render()
-            if (cached && typeof cached.render === "function") {
-                return cached.render(el, props);
+            // Object with a .render() method
+            if (
+                typeof cachedModule === "object" &&
+                cachedModule !== null &&
+                "render" in cachedModule &&
+                typeof (cachedModule as any).render === "function"
+            ) {
+                return (cachedModule as any).render(el, props);
             }
 
-            console.warn("useTSLazy: Unsupported module type", cached);
+            console.warn("useTSLazy: Unsupported module type", cachedModule);
         } catch (err) {
             console.error("useTSLazy failed:", err);
         }
