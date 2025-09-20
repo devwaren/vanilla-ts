@@ -26,7 +26,7 @@ export const useTSElements: TSElements = (
       "class", "id", "href", "src", "alt", "fill", "stroke", "stroke-width",
       "viewBox", "xmlns", "d", "x", "y", "cx", "cy", "r", "width", "height",
       "ts-click", "ts-change", "ts-select",
-      "ts-classlist", "ts-hover", "ts-onsubmit"
+      "ts-classlist", "ts-hover", "ts-submit"
     ],
     FORBID_TAGS: ["script", "iframe", "foreignObject", "body"],
     FORBID_ATTR: ["style", "xlink:href"],
@@ -52,11 +52,13 @@ export const useTSElements: TSElements = (
     const rawValue = (data.attrValue ?? "").toString();
     const value = rawValue.trim();
 
+    // block inline JS
     if (attrName.startsWith("on")) {
       data.keepAttr = false;
       return;
     }
 
+    // allow safe img src
     if (node.nodeName.toLowerCase() === "img" && attrName === "src") {
       const isSafe =
         /^https?:\/\//i.test(value) ||
@@ -66,9 +68,10 @@ export const useTSElements: TSElements = (
       return;
     }
 
+    // validate class names
     if (attrName === "class") {
       const tokens = value.split(/\s+/).filter(Boolean);
-      const safeTokens: string[] = tokens.filter((token) => {
+      const safeTokens = tokens.filter((token) => {
         if (!token.includes("[")) {
           return /^[a-zA-Z0-9\-\:\/_]+$/.test(token);
         }
@@ -86,23 +89,9 @@ export const useTSElements: TSElements = (
       data.attrValue = safeTokens.join(" ");
       return;
     }
-
-    if (attrName === "data-classlist") {
-      if (!/^[a-zA-Z0-9\-\s:_]+$/.test(value)) {
-        data.keepAttr = false;
-      }
-      return;
-    }
-
-    if (attrName === "data-hover") {
-      if (!/^[a-zA-Z0-9_-]+$/.test(value)) {
-        data.keepAttr = false;
-      }
-      return;
-    }
   });
 
-  // ✅ Force fragment mode (no <body> auto-wrapping)
+  // ✅ Sanitize into fragment
   const sanitizedFragment = DOMPurify.sanitize(element, {
     ...defaultConfig,
     RETURN_DOM_FRAGMENT: true,
@@ -111,31 +100,33 @@ export const useTSElements: TSElements = (
   htmlElement.innerHTML = "";
   htmlElement.appendChild(sanitizedFragment);
 
-  const safeBind = (selector: string, datasetKey: string, eventName: string) => {
-    htmlElement.querySelectorAll<HTMLElement>(selector).forEach((el) => {
-      const key = (el.dataset as any)[datasetKey];
-      if (!key) return;
-      if (Object.prototype.hasOwnProperty.call(handlers, key)) {
-        el.addEventListener(eventName, handlers[key]);
+  // ✅ Event binder that reads ts-* attributes directly
+  const safeBind = (attr: string, eventName: string) => {
+    htmlElement.querySelectorAll<HTMLElement>(`[${attr}]`).forEach((el) => {
+      const handlerKey = el.getAttribute(attr);
+      if (!handlerKey) return;
+      if (Object.prototype.hasOwnProperty.call(handlers, handlerKey)) {
+        el.addEventListener(eventName, handlers[handlerKey]);
       }
     });
   };
 
-  safeBind("[ts-click]", "onclick", "click");
-  safeBind("[ts-change]", "onchange", "change");
-  safeBind("[ts-select]", "onselect", "select");
-  safeBind("[ts-hover]", "hover", "mouseenter");
-  safeBind("[ts-submit]", "onsubmit", "submit");
+  safeBind("ts-click", "click");
+  safeBind("ts-change", "change");
+  safeBind("ts-select", "select");
+  safeBind("ts-hover", "mouseenter");
+  safeBind("ts-submit", "submit");
 
+  // ✅ Hover enter/leave from data-hover
   htmlElement.querySelectorAll<HTMLElement>("[data-hover]").forEach((el) => {
     const key = el.dataset.hover!;
-    if (!key) return;
-    if (Object.prototype.hasOwnProperty.call(handlers, key)) {
+    if (key && Object.prototype.hasOwnProperty.call(handlers, key)) {
       el.addEventListener("mouseenter", handlers[key]);
       el.addEventListener("mouseleave", handlers[key]);
     }
   });
 
+  // ✅ Classlist expansion
   htmlElement.querySelectorAll<HTMLElement>("[data-classlist]").forEach((el) => {
     const classList = el.dataset.classlist!;
     if (/^[a-zA-Z0-9\-\s:_]+$/.test(classList)) {
@@ -143,7 +134,5 @@ export const useTSElements: TSElements = (
     }
   });
 
-  document.addEventListener("DOMContentLoaded", (e) => {
-    e.preventDefault();
-  })
+  document.addEventListener("DOMContentLoaded", (e) => { e.preventDefault() });
 };
