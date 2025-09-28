@@ -51,21 +51,20 @@ const TSFilebasedRouter = (): Plugin => {
             : 'Index';
         }
 
-        // ✅ Handle dynamic routes [id].ts → SomethingIdParam
+        // ✅ Dynamic routes: [id].ts → Folder + ParamName (ex: apple/[id].ts → AppId)
         if (fileName.startsWith('[') && fileName.endsWith(']')) {
-          const paramName = fileName.slice(1, -1);
+          const paramName = fileName.slice(1, -1); // "id"
           return (
             folderName.charAt(0).toUpperCase() +
-            folderName.slice(1) +
             paramName.charAt(0).toUpperCase() +
-            paramName.slice(1) +
-            'Param'
+            paramName.slice(1)
           );
         }
 
         // ✅ Normal file
         return fileName.charAt(0).toUpperCase() + fileName.slice(1);
       }
+
 
 
       async function walk(dir: string) {
@@ -85,6 +84,50 @@ const TSFilebasedRouter = (): Plugin => {
         }
         return routes;
       }
+
+      function createEntryClientTemplate() {
+        return `import { useInitialDOM } from "@devwareng/vanilla-ts";
+import App from "./App";
+
+useInitialDOM("app", App)`;
+      }
+
+      function createEntryServerTemplate() {
+        return `import App from './App'
+
+export function render(_url: string) {
+  const html = App()
+  return { html }
+}`;
+      }
+
+
+      function createAppTemplate() {
+        return `import { html, useTSComponent, useTSElements, useTSNoReload, useTSSSRHydration } from '@devwareng/vanilla-ts'
+import { Router } from './routes/__root';
+import "tailwindcss/index.css"
+import "animate.css"
+
+export default function App(DOM?: HTMLElement) {
+  const { isDOM } = useTSSSRHydration(DOM!)
+  if (!isDOM) return
+
+  const ui = useTSElements(
+    isDOM,
+    html\`
+      <div class="min-h-screen text-white bg-black">
+        <div id="routes"></div>
+      </div>
+    \`
+  )
+
+  useTSNoReload(isDOM)
+  useTSComponent("routes", isDOM, Router)
+
+  return ui
+}`;
+      }
+
 
       function createPageTemplate(componentName: string, routePath: string) {
         const hasParams = routePath.includes(':');
@@ -254,6 +297,32 @@ export function createRouter(DOM: HTMLElement) {
             await generate();
           }
         });
+
+        const ENTRY_CLIENT = path.resolve('src/entry-client.ts');
+        const ENTRY_SERVER = path.resolve('src/entry-server.ts');
+
+        try {
+          await fs.access(ENTRY_CLIENT);
+        } catch {
+          await fs.writeFile(ENTRY_CLIENT, createEntryClientTemplate(), 'utf-8');
+          console.log("🟢 Created default src/entry-client.ts");
+        }
+
+        try {
+          await fs.access(ENTRY_SERVER);
+        } catch {
+          await fs.writeFile(ENTRY_SERVER, createEntryServerTemplate(), 'utf-8');
+          console.log("🟢 Created default src/entry-server.ts");
+        }
+
+
+        const APP_FILE = path.resolve('src/App.ts');
+        try {
+          await fs.access(APP_FILE); // check if it exists
+        } catch {
+          await fs.writeFile(APP_FILE, createAppTemplate(), 'utf-8');
+          console.log("🟢 Created default src/App.ts");
+        }
 
         // Watch root file separately for unlink
         chokidar.watch(ROOT_FILE).on('unlink', async () => {

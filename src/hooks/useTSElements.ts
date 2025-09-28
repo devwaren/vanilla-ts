@@ -20,104 +20,123 @@ export const useTSElements: TSElements = (
     ALLOWED_TAGS: [
       "svg", "path", "circle", "rect", "line", "polyline", "polygon", "g",
       "main", "div", "h1", "h2", "h3", "h4", "h5", "h6",
-      "p", "button", "span", "a", "img", "input", "ul", "li", "i"
+      "p", "button", "span", "a", "img", "input", "ul", "li", "i", "label", "form"
     ],
     ALLOWED_ATTR: [
-      "class", "id", "href", "src", "alt", "fill", "stroke", "stroke-width",
-      "viewBox", "xmlns", "d", "x", "y", "cx", "cy", "r", "width", "height",
-      "ts-click", "ts-change", "ts-select",
-      "ts-classlist", "ts-hover", "ts-submit"
+      "class", "id", "href", "src", "alt", "title",
+      "fill", "stroke", "stroke-width", "viewBox", "xmlns", "d", "x", "y",
+      "cx", "cy", "r", "width", "height", "type", "name", "value", "placeholder",
+      // ✅ explicitly allow data-* attributes
+      "data-click", "data-change", "data-select",
+      "data-classlist", "data-hover", "data-submit", "data-key", "data-event"
     ],
-    FORBID_TAGS: ["script", "iframe", "foreignObject", "body"],
-    FORBID_ATTR: ["style", "xlink:href"],
+    FORBID_TAGS: ["script", "iframe", "foreignObject", "body", "html"],
+    FORBID_ATTR: ["style", "xlink:href", "on*"],
     ALLOWED_URI_REGEXP:
       /^(?:(?:https?|mailto|tel|ftp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     ...config,
   };
 
-  // Allow custom elements but forbid <foreignObject>
-  DOMPurify.addHook("uponSanitizeElement", (node, data) => {
-    const tagName = data.tagName.toLowerCase();
-    if (tagName.includes("-")) {
-      data.allowedTags[tagName] = true;
-    }
-    if (tagName === "foreignobject") {
-      data.allowedTags[tagName] = false;
-    }
-  });
-
-  // Attribute-level sanitization
+  // ✅ DOMPurify hook for custom attribute handling
   DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {
     const attrName = (data.attrName || "").toLowerCase();
-    const rawValue = (data.attrValue ?? "").toString();
-    const value = rawValue.trim();
+    const rawValue = (data.attrValue ?? "").toString().trim();
 
-    // block inline JS
+    if (/^data-(click|change|submit|select|hover|classlist|key|event)$/.test(attrName)) {
+      data.keepAttr = true;
+      return;
+    }
+
     if (attrName.startsWith("on")) {
       data.keepAttr = false;
       return;
     }
 
-    // allow safe img src
     if (node.nodeName.toLowerCase() === "img" && attrName === "src") {
       const isSafe =
-        /^https?:\/\//i.test(value) ||
-        /^\/(?!\/)/.test(value) ||
-        /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(value);
+        /^https?:\/\//i.test(rawValue) ||
+        /^\/(?!\/)/.test(rawValue) ||
+        /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(rawValue);
       if (!isSafe) data.keepAttr = false;
       return;
     }
 
-    // validate class names
     if (attrName === "class") {
-      const tokens = value.split(/\s+/).filter(Boolean);
+      const tokens = rawValue.split(/\s+/).filter(Boolean);
+
       const safeTokens = tokens.filter((token) => {
-        if (!token.includes("[")) {
-          return /^[a-zA-Z0-9\-\:\/_]+$/.test(token);
-        }
-        if (/^bg-\[url\((['"]?)(https?:\/\/|\/)[^\s)]+\1\)\]$/.test(token)) {
-          const urlMatch = token.match(/^bg-\[url\((['"]?)(https?:\/\/|\/)([^\s)]+)\1\)\]$/);
-          if (!urlMatch) return false;
-          const url = urlMatch[2] + urlMatch[3];
-          return /^https?:\/\//i.test(url) || /^\/(?!\/)/.test(url);
-        }
-        if (/^bg-\[#([0-9A-Fa-f]{3,8})\]$/.test(token)) {
+        // allow normal tailwind tokens (letters, numbers, - : / _ [ ])
+        if (/^[a-zA-Z0-9\-\:\/_\[\]]+$/.test(token)) {
+          // special case: bg-[url(...)]
+          if (/^bg-\[url\(.+\)\]$/.test(token)) {
+            const insideUrl = token
+              .replace(/^bg-\[url\(/, "")
+              .replace(/\)\]$/, "")
+              .replace(/^['"]|['"]$/g, ""); // strip quotes
+
+            // enforce safe URLs only
+            const isSafe =
+              /^https?:\/\//i.test(insideUrl) ||
+              /^\/(?!\/)/.test(insideUrl); // root-relative
+
+            if (!isSafe) return false; // reject data:, javascript:, etc.
+          }
           return true;
         }
         return false;
       });
+
       data.attrValue = safeTokens.join(" ");
       return;
     }
+
   });
 
-  // ✅ Sanitize into fragment
+  // ✅ sanitize directly into a DocumentFragment
   const sanitizedFragment = DOMPurify.sanitize(element, {
     ...defaultConfig,
     RETURN_DOM_FRAGMENT: true,
   }) as DocumentFragment;
 
-  htmlElement.innerHTML = "";
+  // ✅ Remove old children without innerHTML
+  while (htmlElement.firstChild) {
+    htmlElement.removeChild(htmlElement.firstChild);
+  }
+
+  // ✅ Append safe fragment
   htmlElement.appendChild(sanitizedFragment);
 
-  // ✅ Event binder that reads ts-* attributes directly
+  // --- Event binding helpers ---
   const safeBind = (attr: string, eventName: string) => {
     htmlElement.querySelectorAll<HTMLElement>(`[${attr}]`).forEach((el) => {
       const handlerKey = el.getAttribute(attr);
       if (!handlerKey) return;
+
       if (Object.prototype.hasOwnProperty.call(handlers, handlerKey)) {
-        el.addEventListener(eventName, handlers[handlerKey]);
+        el.addEventListener(eventName, (e) => {
+          if (eventName === "submit") e.preventDefault();
+          handlers[handlerKey](e);
+        });
       }
     });
   };
 
-  safeBind("ts-click", "click");
-  safeBind("ts-change", "change");
-  safeBind("ts-select", "select");
-  safeBind("ts-hover", "mouseenter");
-  safeBind("ts-submit", "submit");
+  // ✅ Bind declarative events
+  safeBind("data-click", "click");
+  safeBind("data-change", "change");
+  safeBind("data-select", "select");
+  safeBind("data-submit", "submit");
 
-  // ✅ Hover enter/leave from data-hover
+  // ✅ Bind dataset-based event (data-key + optional data-event)
+  htmlElement.querySelectorAll<HTMLElement>("[data-key]").forEach((el) => {
+    const key = el.dataset.key!;
+    const event = el.dataset.event ?? "click";
+    if (key && Object.prototype.hasOwnProperty.call(handlers, key)) {
+      el.addEventListener(event, handlers[key]);
+    }
+  });
+
+  // ✅ Hover enter/leave
   htmlElement.querySelectorAll<HTMLElement>("[data-hover]").forEach((el) => {
     const key = el.dataset.hover!;
     if (key && Object.prototype.hasOwnProperty.call(handlers, key)) {
@@ -133,6 +152,4 @@ export const useTSElements: TSElements = (
       el.classList.add(...classList.split(/\s+/));
     }
   });
-
-  document.addEventListener("DOMContentLoaded", (e) => { e.preventDefault() });
 };
