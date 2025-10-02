@@ -26,32 +26,36 @@ export const useTSElements: TSElements = (
       "class", "id", "href", "src", "alt", "title",
       "fill", "stroke", "stroke-width", "viewBox", "xmlns", "d", "x", "y",
       "cx", "cy", "r", "width", "height", "type", "name", "value", "placeholder",
-      // ✅ explicitly allow data-* attributes
       "data-click", "data-change", "data-select",
       "data-classlist", "data-hover", "data-submit", "data-key", "data-event"
     ],
     FORBID_TAGS: ["script", "iframe", "foreignObject", "body", "html"],
-    FORBID_ATTR: ["style", "xlink:href", "on*"],
+    FORBID_ATTR: ["style", "xlink:href"], // on* handled via hook
     ALLOWED_URI_REGEXP:
       /^(?:(?:https?|mailto|tel|ftp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
     ...config,
   };
 
-  // ✅ DOMPurify hook for custom attribute handling
+  // -----------------------------
+  // DOMPurify hooks
+  // -----------------------------
   DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {
     const attrName = (data.attrName || "").toLowerCase();
     const rawValue = (data.attrValue ?? "").toString().trim();
 
-    if (/^data-(click|change|submit|select|hover|classlist|key|event)$/.test(attrName)) {
-      data.keepAttr = true;
-      return;
-    }
-
+    // 1️⃣ Remove all on* attributes
     if (attrName.startsWith("on")) {
       data.keepAttr = false;
       return;
     }
 
+    // 2️⃣ Allow data-* attributes explicitly
+    if (/^data-(click|change|submit|select|hover|classlist|key|event)$/.test(attrName)) {
+      data.keepAttr = true;
+      return;
+    }
+
+    // 3️⃣ Img src safety
     if (node.nodeName.toLowerCase() === "img" && attrName === "src") {
       const isSafe =
         /^https?:\/\//i.test(rawValue) ||
@@ -61,26 +65,32 @@ export const useTSElements: TSElements = (
       return;
     }
 
+    // 4️⃣ Tailwind class sanitization
     if (attrName === "class") {
       const tokens = rawValue.split(/\s+/).filter(Boolean);
 
       const safeTokens = tokens.filter((token) => {
-        // allow normal tailwind tokens (letters, numbers, - : / _ [ ])
-        if (/^[a-zA-Z0-9\-\:\/_\[\]]+$/.test(token)) {
-          // special case: bg-[url(...)]
-          if (/^bg-\[url\(.+\)\]$/.test(token)) {
+        // Allow normal Tailwind characters
+        if (/^[a-zA-Z0-9\-\:\/_\[\]\(\)]*$/.test(token)) {
+          // bg-[url(...)] special case
+          if (/^bg-\[url\(.*\)\]$/.test(token)) {
             const insideUrl = token
               .replace(/^bg-\[url\(/, "")
               .replace(/\)\]$/, "")
               .replace(/^['"]|['"]$/g, ""); // strip quotes
 
-            // enforce safe URLs only
+            // ✅ Allow empty, relative, or absolute https URLs
             const isSafe =
-              /^https?:\/\//i.test(insideUrl) ||
-              /^\/(?!\/)/.test(insideUrl); // root-relative
+              insideUrl === "" ||              // empty URL
+              /^https?:\/\//i.test(insideUrl) || // absolute https
+              /^\/(?!\/)/.test(insideUrl) ||     // relative path
+              /^\.{0,2}\//.test(insideUrl);      // ./ ../
 
-            if (!isSafe) return false; // reject data:, javascript:, etc.
+            return isSafe;
           }
+          // bg-[] special case (completely empty)
+          if (/^bg-\[\]$/.test(token)) return true;
+
           return true;
         }
         return false;
@@ -89,29 +99,33 @@ export const useTSElements: TSElements = (
       data.attrValue = safeTokens.join(" ");
       return;
     }
-
   });
 
-  // ✅ sanitize directly into a DocumentFragment
+  // -----------------------------
+  // Sanitize HTML into DocumentFragment
+  // -----------------------------
   const sanitizedFragment = DOMPurify.sanitize(element, {
     ...defaultConfig,
     RETURN_DOM_FRAGMENT: true,
   }) as DocumentFragment;
 
-  // ✅ Remove old children without innerHTML
-  while (htmlElement.firstChild) {
-    htmlElement.removeChild(htmlElement.firstChild);
-  }
+  // -----------------------------
+  // Clear old children
+  // -----------------------------
+  while (htmlElement.firstChild) htmlElement.removeChild(htmlElement.firstChild);
 
-  // ✅ Append safe fragment
+  // -----------------------------
+  // Append sanitized fragment
+  // -----------------------------
   htmlElement.appendChild(sanitizedFragment);
 
-  // --- Event binding helpers ---
+  // -----------------------------
+  // Event binding helpers
+  // -----------------------------
   const safeBind = (attr: string, eventName: string) => {
     htmlElement.querySelectorAll<HTMLElement>(`[${attr}]`).forEach((el) => {
       const handlerKey = el.getAttribute(attr);
       if (!handlerKey) return;
-
       if (Object.prototype.hasOwnProperty.call(handlers, handlerKey)) {
         el.addEventListener(eventName, (e) => {
           if (eventName === "submit") e.preventDefault();
@@ -121,13 +135,11 @@ export const useTSElements: TSElements = (
     });
   };
 
-  // ✅ Bind declarative events
   safeBind("data-click", "click");
   safeBind("data-change", "change");
   safeBind("data-select", "select");
   safeBind("data-submit", "submit");
 
-  // ✅ Bind dataset-based event (data-key + optional data-event)
   htmlElement.querySelectorAll<HTMLElement>("[data-key]").forEach((el) => {
     const key = el.dataset.key!;
     const event = el.dataset.event ?? "click";
@@ -136,7 +148,6 @@ export const useTSElements: TSElements = (
     }
   });
 
-  // ✅ Hover enter/leave
   htmlElement.querySelectorAll<HTMLElement>("[data-hover]").forEach((el) => {
     const key = el.dataset.hover!;
     if (key && Object.prototype.hasOwnProperty.call(handlers, key)) {
@@ -145,7 +156,6 @@ export const useTSElements: TSElements = (
     }
   });
 
-  // ✅ Classlist expansion
   htmlElement.querySelectorAll<HTMLElement>("[data-classlist]").forEach((el) => {
     const classList = el.dataset.classlist!;
     if (/^[a-zA-Z0-9\-\s:_]+$/.test(classList)) {

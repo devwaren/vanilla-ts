@@ -161,6 +161,8 @@ export default function ${componentName}(DOM: HTMLElement) {
         return `import { createRouter } from "@/gen/tsrouter.gen";
 import { useTSParams } from "@devwareng/vanilla-ts";
 
+// This file is auto-generated
+
 export const Router = (DOM: HTMLElement) => {
   useTSParams.getState();
   const router = createRouter(DOM);
@@ -231,10 +233,10 @@ export function createRouter(DOM: HTMLElement) {
         return "([^/]+)"
       }) + "$")
       const pathname = path.split("?")[0]
-      const match = pathname.match(regex)
+      const match = pathname?.match(regex)
       if (match) {
         const params: Record<string, string> = {}
-        keys.forEach((key, i) => (params[key] = match[i + 1]))
+        keys.forEach((key, i) => (params[key] = match[i + 1] || "))
         return { ...route, params }
       }
     }

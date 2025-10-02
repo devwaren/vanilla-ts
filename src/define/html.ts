@@ -10,15 +10,18 @@ function sanitize(input: unknown): string {
         str = "";
     }
 
+    // ✅ Block empty url() cases (url(''), url(), url("   "))
+    str = str.replace(/url\(\s*(['"])?\s*\1?\s*\)/gi, "");
+
     return str
-        // Remove <script>, <iframe>, <object>, <embed>, <link>, <style>, <meta>
+        // Remove <script>, <iframe>, <object>, <embed>, <link>, <style>, <meta>, <body>
         .replace(/<\s*(script|iframe|object|embed|link|style|meta|body)[^>]*>.*?<\s*\/\s*\1\s*>/gi, "")
         // Remove standalone dangerous opening tags
         .replace(/<\s*(script|iframe|object|embed|link|style|meta)[^>]*>/gi, "")
         // Strip inline event handlers like onclick=, onerror=, etc.
         .replace(/\s+on\w+\s*=\s*(['"]).*?\1/gi, "")
         .replace(/\s+on\w+\s*=\s*[^\s>]+/gi, "") // also unquoted
-        // Block javascript:, vbscript:, data: etc. in href/src
+        // Block javascript:, vbscript:, data:, file: etc. in href/src
         .replace(
             /\s(href|src)\s*=\s*(['"]?)\s*(javascript:|vbscript:|data:|file:)[^'">\s]*\2/gi,
             "$1=\"#\""
