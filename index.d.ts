@@ -25,7 +25,8 @@ export {
     useTSExtractParams,
     useTSParams,
     useTSEventAll,
-    useTSElements
+    useTSElements,
+    useAnchor
 } from "./src/hooks"
 export { TSRouter } from "./src/routes/class/Router.class";
 
