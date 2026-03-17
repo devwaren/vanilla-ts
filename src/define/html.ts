@@ -1,30 +1,25 @@
 function sanitize(input: unknown): string {
-    // Always convert to string
-    let str = input === null || input === undefined ? "" : String(input);
+    let str = input == null ? "" : String(input);
 
-    // Normalize case for easier matching
     const lower = str.toLowerCase();
 
-    // Quick reject if it contains obvious script patterns
     if (lower.includes("<script") || lower.includes("javascript:")) {
-        str = "";
+        return "";
     }
 
-    // ✅ Block empty url() cases (url(''), url(), url("   "))
     str = str.replace(/url\(\s*(['"])?\s*\1?\s*\)/gi, "");
 
     return str
-        // Remove <script>, <iframe>, <object>, <embed>, <link>, <style>, <meta>, <body>
+        // Remove dangerous tags
         .replace(/<\s*(script|iframe|object|embed|link|style|meta|body)[^>]*>.*?<\s*\/\s*\1\s*>/gi, "")
-        // Remove standalone dangerous opening tags
         .replace(/<\s*(script|iframe|object|embed|link|style|meta)[^>]*>/gi, "")
-        // Strip inline event handlers like onclick=, onerror=, etc.
+        // Strip inline events
         .replace(/\s+on\w+\s*=\s*(['"]).*?\1/gi, "")
-        .replace(/\s+on\w+\s*=\s*[^\s>]+/gi, "") // also unquoted
-        // Block javascript:, vbscript:, data:, file: etc. in href/src
+        .replace(/\s+on\w+\s*=\s*[^\s>]+/gi, "")
+        // Block dangerous href/src
         .replace(
             /\s(href|src)\s*=\s*(['"]?)\s*(javascript:|vbscript:|data:|file:)[^'">\s]*\2/gi,
-            "$1=\"#\""
+            '$1="#"'
         );
 }
 
