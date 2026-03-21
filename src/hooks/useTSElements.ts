@@ -1,165 +1,280 @@
 import DOMPurify, { Config } from "dompurify";
+import { animate } from "motion";
 
-type EventHandlers = Record<string, EventListener>;
+// -----------------------------
+// STRICT ALLOWLIST
+// -----------------------------
+const ALLOWED_TAGS = [
+  "div", "span", "p", "a", "button", "ul", "li",
+  "img", "input", "form", "label",
+  "h1", "h2", "h3", "h4", "h5", "h6",
+  "section", "main", "article"
+];
 
-type TSElements = (
-  htmlElement: HTMLElement,
-  element: string,
-  handlers?: EventHandlers,
-  config?: Config
-) => void;
+const ALLOWED_ATTR = [
+  "class", "id", "href", "src", "alt", "title",
+  "type", "value", "name", "placeholder",
+  "data-click", "data-change", "data-select", "data-effect",
+  "data-hover", "data-submit", "data-key", "data-event",
+  "data-component", "data-stagger", "data-input",
+  "target", "rel"
+];
 
-export const useTSElements: TSElements = (
-  htmlElement,
-  element,
-  handlers = {},
-  config
-) => {
-  const defaultConfig: Config = {
-    USE_PROFILES: { svg: true, html: true },
-    ALLOWED_TAGS: [
-      "svg", "path", "circle", "rect", "line", "polyline", "polygon", "g",
-      "main", "div", "h1", "h2", "h3", "h4", "h5", "h6",
-      "p", "button", "span", "a", "img", "input", "ul", "li", "i", "label", "form"
-    ],
-    ALLOWED_ATTR: [
-      "class", "id", "href", "src", "alt", "title",
-      "fill", "stroke", "stroke-width", "viewBox", "xmlns", "d", "x", "y",
-      "cx", "cy", "r", "width", "height", "type", "name", "value", "placeholder",
-      "data-click", "data-change", "data-select",
-      "data-classlist", "data-hover", "data-submit", "data-key", "data-event"
-    ],
-    FORBID_TAGS: ["script", "iframe", "foreignObject", "body", "html"],
-    FORBID_ATTR: ["style", "xlink:href"], // on* handled via hook
-    ALLOWED_URI_REGEXP:
-      /^(?:(?:https?|mailto|tel|ftp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
-    ...config,
-  };
+// -----------------------------
+// URL POLICY
+// -----------------------------
+function isSafeUrl(value: string) {
+  return /^(https?:\/\/|\/|#)/i.test(value.trim());
+}
 
-  // -----------------------------
-  // DOMPurify hooks
-  // -----------------------------
-  DOMPurify.addHook("uponSanitizeAttribute", (node, data) => {
-    const attrName = (data.attrName || "").toLowerCase();
-    const rawValue = (data.attrValue ?? "").toString().trim();
+// -----------------------------
+// HARDEN
+// -----------------------------
+function hardenAttributes(root: ParentNode) {
+  root.querySelectorAll<HTMLElement>("*").forEach((el) => {
+    [...el.attributes].forEach((attr) => {
+      const name = attr.name.toLowerCase();
 
-    // 1️⃣ Remove all on* attributes
-    if (attrName.startsWith("on")) {
-      data.keepAttr = false;
-      return;
-    }
+      if (name.startsWith("xlink") || name.startsWith("xml") || name.startsWith("on")) {
+        el.removeAttribute(attr.name);
+        return;
+      }
 
-    // 2️⃣ Allow data-* attributes explicitly
-    if (/^data-(click|change|submit|select|hover|classlist|key|event)$/.test(attrName)) {
-      data.keepAttr = true;
-      return;
-    }
-
-    // 3️⃣ Img src safety
-    if (node.nodeName.toLowerCase() === "img" && attrName === "src") {
-      const isSafe =
-        /^https?:\/\//i.test(rawValue) ||
-        /^\/(?!\/)/.test(rawValue) ||
-        /^data:image\/(png|jpeg|jpg|gif|webp);base64,/i.test(rawValue);
-      if (!isSafe) data.keepAttr = false;
-      return;
-    }
-
-    // 4️⃣ Tailwind class sanitization
-    if (attrName === "class") {
-      const tokens = rawValue.split(/\s+/).filter(Boolean);
-
-      const safeTokens = tokens.filter((token) => {
-        // Allow normal Tailwind characters
-        if (/^[a-zA-Z0-9\-\:\/_\[\]\(\)]*$/.test(token)) {
-          // bg-[url(...)] special case
-          if (/^bg-\[url\(.*\)\]$/.test(token)) {
-            const insideUrl = token
-              .replace(/^bg-\[url\(/, "")
-              .replace(/\)\]$/, "")
-              .replace(/^['"]|['"]$/g, ""); // strip quotes
-
-            // ✅ Allow empty, relative, or absolute https URLs
-            const isSafe =
-              insideUrl === "" ||              // empty URL
-              /^https?:\/\//i.test(insideUrl) || // absolute https
-              /^\/(?!\/)/.test(insideUrl) ||     // relative path
-              /^\.{0,2}\//.test(insideUrl);      // ./ ../
-
-            return isSafe;
-          }
-          // bg-[] special case (completely empty)
-          if (/^bg-\[\]$/.test(token)) return true;
-
-          return true;
-        }
-        return false;
-      });
-
-      data.attrValue = safeTokens.join(" ");
-      return;
-    }
-  });
-
-  // -----------------------------
-  // Sanitize HTML into DocumentFragment
-  // -----------------------------
-  const sanitizedFragment = DOMPurify.sanitize(element, {
-    ...defaultConfig,
-    RETURN_DOM_FRAGMENT: true,
-  }) as DocumentFragment;
-
-  // -----------------------------
-  // Clear old children
-  // -----------------------------
-  while (htmlElement.firstChild) htmlElement.removeChild(htmlElement.firstChild);
-
-  // -----------------------------
-  // Append sanitized fragment
-  // -----------------------------
-  htmlElement.appendChild(sanitizedFragment);
-
-  // -----------------------------
-  // Event binding helpers
-  // -----------------------------
-  const safeBind = (attr: string, eventName: string) => {
-    htmlElement.querySelectorAll<HTMLElement>(`[${attr}]`).forEach((el) => {
-      const handlerKey = el.getAttribute(attr);
-      if (!handlerKey) return;
-      if (Object.prototype.hasOwnProperty.call(handlers, handlerKey)) {
-        el.addEventListener(eventName, (e) => {
-          if (eventName === "submit") e.preventDefault();
-          handlers[handlerKey](e);
-        });
+      if ((name === "href" || name === "src") && !isSafeUrl(attr.value)) {
+        el.setAttribute(name, "#");
       }
     });
+
+    if (el.tagName === "A" && el.getAttribute("target") === "_blank") {
+      el.setAttribute("rel", "noopener noreferrer");
+    }
+  });
+}
+
+// -----------------------------
+// HTML SANITIZER
+// -----------------------------
+export function html(strings: TemplateStringsArray, ...values: unknown[]): string {
+  const raw = strings.reduce((acc, str, i) => {
+    return acc + str + (values[i] ?? "");
+  }, "");
+
+  return DOMPurify.sanitize(raw, { ALLOWED_TAGS, ALLOWED_ATTR });
+}
+
+// -----------------------------
+// EFFECT TYPE
+// -----------------------------
+type ParsedEffect = {
+  from: Record<string, any>;
+  to: Record<string, any>;
+  duration: number;
+  easing: string;
+  delay: number;
+  repeat: number | "Infinity";
+
+  parallaxY?: number;
+  parallaxX?: number;
+  mouseX?: number;
+  mouseY?: number;
+  replay?: boolean;
+};
+
+// -----------------------------
+// EFFECT PARSER
+// -----------------------------
+function parseTailwindEffect(effect: string): ParsedEffect {
+  const from: Record<string, any> = {};
+  const to: Record<string, any> = {};
+
+  let duration = 400;
+  let easing = "ease-in-out";
+  let delay = 0;
+  let repeat: number | "Infinity" = 0;
+
+  let parallaxY: number | undefined;
+  let parallaxX: number | undefined;
+  let mouseX: number | undefined;
+  let mouseY: number | undefined;
+  let replay = false;
+
+  effect.split(/\s+/).forEach((token) => {
+    if (token === "infinite") repeat = Infinity;
+    else if (token === "replay") replay = true;
+    else if (token.startsWith("duration-")) duration = +token.replace("duration-", "");
+    else if (token.startsWith("delay-")) delay = +token.replace("delay-", "");
+    else if (/^ease/.test(token) || token === "linear") easing = token;
+
+    // animations
+    else if (token === "fade-in") { from.opacity = 0; to.opacity = 1; }
+    else if (token === "fade-out") { from.opacity = 1; to.opacity = 0; }
+    else if (token === "slide-up") { from.translateY = 20; to.translateY = 0; }
+    else if (token === "slide-down") { from.translateY = -20; to.translateY = 0; }
+    else if (token === "slide-left") { from.translateX = 20; to.translateX = 0; }
+    else if (token === "slide-right") { from.translateX = -20; to.translateX = 0; }
+
+    // parallax
+    else if (token.startsWith("parallax-y-")) parallaxY = +token.replace("parallax-y-", "");
+    else if (token.startsWith("parallax-x-")) parallaxX = +token.replace("parallax-x-", "");
+
+    // mouse
+    else if (token.startsWith("mouse-x-")) mouseX = +token.replace("mouse-x-", "");
+    else if (token.startsWith("mouse-y-")) mouseY = +token.replace("mouse-y-", "");
+  });
+
+  return { from, to, duration, easing, delay, repeat, parallaxY, parallaxX, mouseX, mouseY, replay };
+}
+
+// -----------------------------
+// INITIAL STYLE (SAFE TRANSFORM)
+// -----------------------------
+function applyInitialStyles(el: HTMLElement, from: any) {
+  el.style.willChange = "transform, opacity";
+
+  const x = from.translateX ?? 0;
+  const y = from.translateY ?? 0;
+
+  el.style.setProperty("--tx", `${x}px`);
+  el.style.setProperty("--ty", `${y}px`);
+
+  el.style.transform = `translate3d(var(--tx), var(--ty), 0)`;
+
+  if (from.opacity !== undefined) el.style.opacity = String(from.opacity);
+}
+
+// -----------------------------
+export type ElementHandlers = Record<string, (el: HTMLElement, e?: Event) => void>;
+
+// -----------------------------
+export const useTSElements = (
+  root: HTMLElement,
+  template: string,
+  handlers: ElementHandlers = {},
+  config?: Config
+) => {
+
+  const fragment = DOMPurify.sanitize(template, {
+    ALLOWED_TAGS,
+    ALLOWED_ATTR,
+    RETURN_DOM_FRAGMENT: true,
+    ...config,
+  });
+
+  hardenAttributes(fragment as unknown as ParentNode);
+  root.replaceChildren(fragment);
+
+  // -----------------------------
+  // EVENT DELEGATION (OPTIMIZED)
+  // -----------------------------
+  const clickHandler = (e: Event) => {
+    const target = (e.target as HTMLElement).closest("[data-click]") as HTMLElement | null;
+    if (!target) return;
+
+    const key = target.dataset.click!;
+    handlers[key]?.(target, e);
   };
 
-  safeBind("data-click", "click");
-  safeBind("data-change", "change");
-  safeBind("data-select", "select");
-  safeBind("data-submit", "submit");
+  root.addEventListener("click", clickHandler);
 
-  htmlElement.querySelectorAll<HTMLElement>("[data-key]").forEach((el) => {
-    const key = el.dataset.key!;
-    const event = el.dataset.event ?? "click";
-    if (key && Object.prototype.hasOwnProperty.call(handlers, key)) {
-      el.addEventListener(event, handlers[key]);
+  // -----------------------------
+  // COMPONENTS
+  // -----------------------------
+  root.querySelectorAll("[data-component]").forEach((el) => {
+    const key = (el as HTMLElement).dataset.component!;
+    handlers[key]?.(el as HTMLElement);
+  });
+
+  // -----------------------------
+  // INPUT
+  // -----------------------------
+  root.querySelectorAll("[data-input]").forEach((el) => {
+    const key = (el as HTMLInputElement).dataset.input!;
+    const fn = handlers[key];
+    if (!fn) return;
+
+    fn(el as HTMLElement);
+
+    el.addEventListener("input", (e) => fn(el as HTMLElement, e));
+  });
+
+  // -----------------------------
+  // SCROLL + PARALLAX
+  // -----------------------------
+  const parallaxElements: { el: HTMLElement; speedY?: number; speedX?: number }[] = [];
+
+  root.querySelectorAll("[data-effect]").forEach((el) => {
+    const fx = parseTailwindEffect((el as HTMLElement).dataset.effect || "");
+
+    if (fx.parallaxY !== undefined || fx.parallaxX !== undefined) {
+      (el as HTMLElement).style.willChange = "transform";
+      parallaxElements.push({ el: el as HTMLElement, speedY: fx.parallaxY, speedX: fx.parallaxX });
     }
   });
 
-  htmlElement.querySelectorAll<HTMLElement>("[data-hover]").forEach((el) => {
-    const key = el.dataset.hover!;
-    if (key && Object.prototype.hasOwnProperty.call(handlers, key)) {
-      el.addEventListener("mouseenter", handlers[key]);
-      el.addEventListener("mouseleave", handlers[key]);
+  let ticking = false;
+
+  const updateParallax = () => {
+    const scrollY = window.scrollY;
+
+    parallaxElements.forEach(({ el, speedY, speedX }) => {
+      const y = speedY ? scrollY * speedY : 0;
+      const x = speedX ? scrollY * speedX : 0;
+
+      el.style.transform = `
+        translate3d(
+          calc(var(--tx, 0px) + ${x}px),
+          calc(var(--ty, 0px) + ${y}px),
+          0
+        )
+      `;
+    });
+
+    ticking = false;
+  };
+
+  const onScroll = () => {
+    if (!ticking) {
+      requestAnimationFrame(updateParallax);
+      ticking = true;
     }
+  };
+
+  window.addEventListener("scroll", onScroll);
+
+  // -----------------------------
+  // INTERSECTION (ANIMATION)
+  // -----------------------------
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      const el = entry.target as HTMLElement;
+      const fx = parseTailwindEffect(el.dataset.effect || "");
+
+      if (entry.isIntersecting) {
+        applyInitialStyles(el, fx.from);
+
+        setTimeout(() => {
+          animate(el, fx.to, {
+            duration: fx.duration / 1000,
+            easing: fx.easing,
+            repeat: fx.repeat,
+          } as any);
+        }, fx.delay);
+
+        if (!fx.replay) observer.unobserve(el);
+      } else {
+        if (fx.replay) applyInitialStyles(el, fx.from);
+      }
+    });
   });
 
-  htmlElement.querySelectorAll<HTMLElement>("[data-classlist]").forEach((el) => {
-    const classList = el.dataset.classlist!;
-    if (/^[a-zA-Z0-9\-\s:_]+$/.test(classList)) {
-      el.classList.add(...classList.split(/\s+/));
-    }
-  });
+  root.querySelectorAll("[data-effect]").forEach(el => observer.observe(el));
+
+  // -----------------------------
+  // CLEANUP
+  // -----------------------------
+  return () => {
+    observer.disconnect();
+    window.removeEventListener("scroll", onScroll);
+    root.removeEventListener("click", clickHandler);
+  };
 };

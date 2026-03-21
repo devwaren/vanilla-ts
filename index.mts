@@ -2,13 +2,13 @@
 export { html } from './src/define';
 export { mapper } from './src/func'
 export {
-    createEffect,
     createSignal,
     renderChildRoutes,
     useTSNoReload,
     useTSSSRHydration,
     useTSLazy,
     useTSOutlet,
+    useTSReactor,
     useAnchor,
     useTSloadBrython, loadPyFiles, useTSNavigate, useTSMetaData, useTSSelect, useTSCollection, useTSComponent, useTSAuth, useTSElementEach, useInitialDOM, useAnchorSingle, useTSPurifier, useTSEvent, useTSExtractParams, useTSParams, useTSEventAll, useTSElements
 } from "./src/hooks"
